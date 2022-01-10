@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Publishers domain
+
+Parameters:
+  CloudMapsServiceHost:
+    Description: Storage provider URL called to determine where to put output for generated AWS maps
+    Type: String
+  AuthorizationEmail:
+    Type: String
+    Description: Email used for authorization to Kentik API GRPC calls
+  AuthorizationApiToken:
+    Type: String
+    Description: Service API token used for authorization to Kentik API GRPC calls
+  AuthorizationAccessToken:
+    Type: String
+    Description: Access token used for authorization to Kentik API GRPC calls
+
+Globals:
+  Function:
+    Runtime: nodejs14.x
+    Handler: src/index.handler
+    MemorySize: 512
+    Timeout: 900
+    Environment:
+      Variables:
+        CLOUDMAPS_SERVICE_HOST: !Ref CloudMapsServiceHost
+        AUTHORIZATION_EMAIL:  !Ref AuthorizationEmail
+        AUTHORIZATION_API_TOKEN: !Ref AuthorizationApiToken
+        AUTHORIZATION_ACCESS_TOKEN: !Ref AuthorizationAccessToken
+
+Resources:
+  # NOTE: Can be re-added if we prefer to
+  # Api:
+  #   Type: AWS::Serverless::Api
+  #   Properties:
+  #     StageName: Production
+
+  GenerateMapFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./lambdas/generate-map
+      Events:
+        # ApiEvent:
+        #   Type: Api
+        #   Properties:
+        #     Method: get
+        #     Path: /map
+        #     RestApiId: !Ref Api
+        ScheduleEvent:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(1 hour)'
+      Policies:
+        -
+          Version: 2012-10-17
+          Statement:
+            -
+              Effect: Allow
+              Action:
+                - "ec2:Describe*"
+                - "ec2:Search*"
+                - "directconnect:Describe*"
+                - "elb:Describe*"
+                - "network-firewall:Describe*"
+                - "network-firewall:List*"
+              Resource: "*"

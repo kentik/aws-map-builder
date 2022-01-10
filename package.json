@@ -1,0 +1,31 @@
+{
+  "name": "kentik-aws-map-builder",
+  "version": "1.0.0",
+  "description": "Kentik AWS Map Builder",
+  "author": "Kentik Engineering",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "lambdas/*"
+    ]
+  },
+  "scripts": {
+    "test:watch": "jest --watch",
+    "test": "jest --ci --forceExit"
+  },
+  "devDependencies": {
+    "jest": "^27.4.7"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": ["./.jest/setEnvVars.js"],
+    "collectCoverage": true,
+    "reporters": [
+      "default"
+    ],
+    "testPathIgnorePatterns": [
+      "node_modules",
+      ".aws-sam"
+    ]
+  }
+}

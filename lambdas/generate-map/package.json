@@ -1,0 +1,23 @@
+{
+  "name": "generate-map",
+  "version": "1.0.0",
+  "description": "Kentik AWS Map Builder: GenerateMap Lambda",
+  "author": "Kentik Engineering",
+  "private": true,
+  "scripts": {
+    "build": "echo Building!",
+    "lint": "eslint_d . --cache --ext .js,.ts",
+    "test": "yarn lint:no-cache && yarn test:unit"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.5.0",
+    "@grpc/proto-loader": "^0.6.9",
+    "aws-sdk": "^2.1028.0",
+    "axios": "^0.21.1",
+    "bluebird": "^3.7.2",
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+
+  }
+}
