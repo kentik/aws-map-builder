@@ -4,17 +4,25 @@ Description: Publishers domain
 
 Parameters:
   CloudMapsServiceHost:
-    Description: Storage provider URL called to determine where to put output for generated AWS maps
+    Description: Storage provider host address used to determine where to put output for generated AWS maps
     Type: String
   AuthorizationEmail:
     Type: String
-    Description: Email used for authorization to Kentik API GRPC calls
+    Description: Email used for Kentik API authorization
   AuthorizationApiToken:
     Type: String
-    Description: Service API token used for authorization to Kentik API GRPC calls
-  AuthorizationAccessToken:
+    Description: Service API token used for Kentik API authorization
+  PollingPeriod:
     Type: String
-    Description: Access token used for authorization to Kentik API GRPC calls
+    Description: Schedule expression to determine how often to run the network topology collection
+    Default: rate(1 hour)
+  ExposeWithApi:
+    Type: Number
+    Description: Flag to control if to expose the network topology collection with API gateway endpoint
+    Default: 0
+
+Conditions:
+  ExposeWithApiCondition: !Not [!Equals [!Ref ExposeWithApi, 0]]
 
 Globals:
   Function:
@@ -27,30 +35,44 @@ Globals:
         CLOUDMAPS_SERVICE_HOST: !Ref CloudMapsServiceHost
         AUTHORIZATION_EMAIL:  !Ref AuthorizationEmail
         AUTHORIZATION_API_TOKEN: !Ref AuthorizationApiToken
-        AUTHORIZATION_ACCESS_TOKEN: !Ref AuthorizationAccessToken
 
 Resources:
-  # NOTE: Can be re-added if we prefer to
-  # Api:
-  #   Type: AWS::Serverless::Api
-  #   Properties:
-  #     StageName: Production
+  Api:
+    Type: AWS::Serverless::Api
+    Condition: ExposeWithApiCondition
+    Properties:
+      StageName: Production
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          title: !Sub "Kentik AWS Map Builder API"
+        schemes: ["https"]
+        paths:
+          /map/{action}:
+            get:
+              x-amazon-apigateway-integration:
+                uri: { "Fn::Sub": [ "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${__Lambda__}/invocations", { "__Lambda__": !GetAtt GenerateMapFunction.Arn }]}
+                httpMethod: "POST"
+                type: "aws_proxy"
+
+  GenerateMapFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ExposeWithApiCondition
+    Properties:
+      Action: lambda:invokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !GetAtt GenerateMapFunction.Arn
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*/GET/map/{action}"
 
   GenerateMapFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./lambdas/generate-map
       Events:
-        # ApiEvent:
-        #   Type: Api
-        #   Properties:
-        #     Method: get
-        #     Path: /map
-        #     RestApiId: !Ref Api
         ScheduleEvent:
           Type: Schedule
           Properties:
-            Schedule: 'rate(1 hour)'
+            Schedule: !Ref PollingPeriod
       Policies:
         -
           Version: 2012-10-17
@@ -61,7 +83,7 @@ Resources:
                 - "ec2:Describe*"
                 - "ec2:Search*"
                 - "directconnect:Describe*"
-                - "elb:Describe*"
+                - "elasticloadbalancing:Describe*"
                 - "network-firewall:Describe*"
                 - "network-firewall:List*"
               Resource: "*"
