@@ -24,7 +24,7 @@ const actions = {
       'X-CH-Auth-API-Token': AUTHORIZATION_API_TOKEN,
     };
 
-    const { target_url } = await grpcCloudMapsService.provideAwsMetadataStoragePromise(source, { metadata });
+    const { target_url } = await grpcCloudMapsService.provideAwsMetadataStorageLocationPromise(source, { metadata });
     console.info('Target URL determined');
 
     await axios.put(target_url, data);
