@@ -2,6 +2,10 @@ const axios = require('axios');
 const topology = require('./lib/awsTopology');
 const GrpcClient = require('./lib/grpcClient');
 const ApiGateway = require('./lib/apiGateway')
+const { gzip } = require('zlib');
+const { promisify } = require('util');
+
+const compress = promisify(gzip);
 
 const {
   CLOUDMAPS_SERVICE_HOST,
@@ -27,8 +31,12 @@ const actions = {
     const { target_url } = await grpcCloudMapsService.provideAwsMetadataStorageLocationPromise(source, { metadata });
     console.info('Target URL determined');
 
-    await axios.put(target_url, data);
-    console.info(`Topology file stored at target URL ${target_url}`);
+    const serialized = JSON.stringify(data);
+    const compressed = await compress(serialized);
+    console.info(`Topology data compression: ${serialized.length} -> ${compressed.length} bytes (ratio ${Math.round(100 * compressed.length/serialized.length)}%)`);
+
+    await axios.put(target_url, compressed);
+    console.info(`Topology file stored at target URL: ${target_url.substring(0, target_url.indexOf('?'))}`);
 
     return ApiGateway.Success();
   }
