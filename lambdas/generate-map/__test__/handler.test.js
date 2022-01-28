@@ -1,7 +1,12 @@
-const { handler, grpcCloudMapsService } = require('../src/index')
+const { handler, grpcCloudMapsService } = require('../src/index');
+const topology = require('../src/lib/awsTopology');
 const axios = require('axios');
 
 describe('GenerateMap lambda handler', () => {
+  beforeEach(() => {
+    jest.spyOn(topology, 'getInfrastructure')
+      .mockImplementation(async () => ({}));
+  });
   afterEach(() => {
     jest.resetAllMocks();
   });
