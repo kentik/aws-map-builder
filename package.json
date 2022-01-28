@@ -4,6 +4,7 @@
   "description": "Kentik AWS Map Builder",
   "author": "Kentik Engineering",
   "private": true,
+  "license": "MIT",
   "workspaces": {
     "packages": [
       "lambdas/*"
@@ -19,7 +20,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFiles": ["./.jest/setEnvVars.js"],
+    "setupFiles": [
+      "./.jest/setEnvVars.js"
+    ],
     "collectCoverage": true,
     "reporters": [
       "default"
