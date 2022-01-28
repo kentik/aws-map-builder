@@ -1,5 +1,7 @@
 # AWS Map Builder
 
+![Build and Test](https://github.com/kentik/aws-map-builder/actions/workflows/tests.yml/badge.svg)
+
 **AWS Serverless-based solution to build AWS network topology map using AWS SDK within Lambda function and ingest it into Kentik portal.**
 
 The solution is based on [AWS Serverless Architecture Model](https://aws.amazon.com/serverless/sam/) (AWS SAM) and [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html) so it works with commands to build and deploy using it. AWS SAM relies on AWS Cloudformation and its concept of stacks that combine a set of resources required to run particular functionality.
