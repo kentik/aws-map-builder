@@ -13,15 +13,16 @@ const {
   AUTHORIZATION_API_TOKEN,
 } = process.env;
 
+const grpcCloudMapsService = new GrpcClient(
+  `${__dirname}/proto/cloud_maps.proto`,  // proto file path
+  'kentik.cloud_maps.v202201alpha1',      // package path
+  'CloudMapsService',                     // service name
+  CLOUDMAPS_SERVICE_HOST,                 // service host
+);
+
 const actions = {
   render: (source, data) => ApiGateway.Success({ source, data }),
   send: async (source, data) => {
-    const grpcCloudMapsService = new GrpcClient(
-      `${__dirname}/proto/cloud_maps.proto`,  // proto file path
-      'kentik.cloud_maps.v202201alpha1',      // package path
-      'CloudMapsService',                     // service name
-      CLOUDMAPS_SERVICE_HOST,                 // service host
-    );
     console.info('GRPC client established');
     const metadata = {
       'X-CH-Auth-Email': AUTHORIZATION_EMAIL,
@@ -64,10 +65,11 @@ const handler = async (event, context) => {
     const infrastructure = await topology.getInfrastructure();
     console.info('Infrastructure topology retrieved');
 
-    return actions[action](source, infrastructure);
+    const result = await actions[action](source, infrastructure);
+    return result;
   } catch (error) {
     const message = 'Error generating the map';
-    console.error(message, error.message || error.code, error);
+    console.error(message, error.code || error.message, error);
     return ApiGateway.Error(message);
   }
 };
@@ -75,5 +77,6 @@ const handler = async (event, context) => {
 
 module.exports = {
   handler,
+  grpcCloudMapsService,
 };
 
