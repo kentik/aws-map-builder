@@ -1,10 +1,10 @@
 const { handler, grpcCloudMapsService } = require('../src/index');
-const topology = require('../src/lib/awsTopology');
+const AwsCrawler = require('../src/lib/awsCrawler');
 const axios = require('axios');
 
 describe('GenerateMap lambda handler', () => {
   beforeEach(() => {
-    jest.spyOn(topology, 'getInfrastructure')
+    jest.spyOn(AwsCrawler.prototype, 'execute')
       .mockImplementation(async () => ({}));
   });
   afterEach(() => {

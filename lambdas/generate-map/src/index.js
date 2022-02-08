@@ -1,9 +1,10 @@
 const axios = require('axios');
-const topology = require('./lib/awsTopology');
-const GrpcClient = require('./lib/grpcClient');
-const ApiGateway = require('./lib/apiGateway')
 const { gzip } = require('zlib');
 const { promisify } = require('util');
+const AwsCrawler = require('./lib/awsCrawler');
+const GrpcClient = require('./lib/grpcClient');
+const ApiGateway = require('./lib/apiGateway')
+const defaultAwsNetworkMapping = require('./lib/defaultAwsNetworkMapping.json');
 
 const compress = promisify(gzip);
 
@@ -11,6 +12,8 @@ const {
   CLOUDMAPS_SERVICE_HOST,
   AUTHORIZATION_EMAIL,
   AUTHORIZATION_API_TOKEN,
+  GRPC_INSECURE,
+  AWS_REGION_OVERRIDE,
 } = process.env;
 
 const grpcCloudMapsService = new GrpcClient(
@@ -18,6 +21,7 @@ const grpcCloudMapsService = new GrpcClient(
   'kentik.cloud_maps.v202201alpha1',      // package path
   'CloudMapsService',                     // service name
   CLOUDMAPS_SERVICE_HOST,                 // service host
+  { insecure: !!GRPC_INSECURE },
 );
 
 const actions = {
@@ -62,7 +66,9 @@ const handler = async (event, context) => {
       source_aws_region: region,
     };
 
-    const infrastructure = await topology.getInfrastructure();
+    const options = AWS_REGION_OVERRIDE ? { region: AWS_REGION_OVERRIDE } : {};
+    const networkCrawler = new AwsCrawler(defaultAwsNetworkMapping, options);
+    const infrastructure = await networkCrawler.execute();
     console.info('Infrastructure topology retrieved');
 
     const result = await actions[action](source, infrastructure);
