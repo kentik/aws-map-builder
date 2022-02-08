@@ -1,0 +1,108 @@
+{
+  "EC2": {
+    "methods": [
+      "describeAvailabilityZones",
+      "describeCustomerGateways",
+      "describeFlowLogs",
+      "describeInternetGateways",
+      "describeInstances",
+      "describeNatGateways",
+      "describeNetworkAcls",
+      "describeNetworkInterfaces",
+      "describePrefixLists",
+      "describeRouteTables",
+      "describeSecurityGroups",
+      "describeSubnets",
+      "describeTransitGateways",
+      "describeTransitGatewayAttachments",
+      "describeTransitGatewayVpcAttachments",
+      {
+        "methodName": "describeTransitGatewayRouteTables",
+        "augmentWith": [
+          {
+            "methodName": "searchTransitGatewayRoutes",
+            "property": "TransitGatewayRouteTables",
+            "paramsMapping": {
+              "TransitGatewayRouteTableId": "TransitGatewayRouteTableId"
+            },
+            "staticParams": {
+              "Filters": [
+                {
+                  "Name": "state",
+                  "Values": [
+                    "active",
+                    "blackhole"
+                  ]
+                }
+              ]
+            },
+            "targetMapping": {
+              "Routes": "Routes"
+            }
+          }
+        ]
+      },
+      "describeTransitGatewayConnects",
+      "describeTransitGatewayConnectPeers",
+      "describeVpcs",
+      "describeVpcEndpoints",
+      "describeVpcPeeringConnections",
+      "describeVpnConnections",
+      "describeVpnGateways"
+    ]
+  },
+  "DirectConnect": {
+    "options": {
+      "pagination": {
+        "request": "nextToken",
+        "response": "nextToken"
+      }
+    },
+    "methods": [
+      {
+        "methodName": "describeDirectConnectGateways",
+        "augmentWith": [
+          {
+            "methodName": "describeDirectConnectGatewayAttachments",
+            "property": "directConnectGateways",
+            "paramsMapping": {
+              "directConnectGatewayId": "directConnectGatewayId"
+            },
+            "targetMapping": {
+              "directConnectGatewayAttachments": "directConnectGatewayAttachments"
+            }
+          },
+          {
+            "methodName": "describeDirectConnectGatewayAssociations",
+            "property": "directConnectGateways",
+            "paramsMapping": {
+              "directConnectGatewayId": "directConnectGatewayId"
+            },
+            "targetMapping": {
+              "directConnectGatewayAssociations": "directConnectGatewayAssociations"
+            }
+          }
+        ]
+      },
+      "describeVirtualInterfaces",
+      "describeLags",
+      "describeConnections"
+    ]
+  },
+  "ELB": {
+    "options": {
+      "pagination": {
+        "request": "Marker",
+        "response": "NextMarker"
+      }
+    },
+    "methods": [
+      "describeLoadBalancers"
+    ]
+  },
+  "NetworkFirewall": {
+    "methods": [
+      "listFirewalls"
+    ]
+  }
+}
