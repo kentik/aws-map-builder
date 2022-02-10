@@ -26,7 +26,13 @@ class GRPCClient {
     })(packageName);
 
     const listMethods = this.packageDefinition[`${packageName}.${service}`];
-    this.client = new proto[service](host, grpc.credentials.createInsecure());
+
+    const credentials =
+      options.insecure
+        ? grpc.credentials.createInsecure()
+        : grpc.credentials.createSsl();
+
+    this.client = new proto[service](host, credentials);
     this.listNameMethods = [];
 
     for (const key in listMethods) {

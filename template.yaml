@@ -82,7 +82,9 @@ Resources:
               Action:
                 - "ec2:Describe*"
                 - "ec2:Search*"
+                - "ec2:List*"
                 - "directconnect:Describe*"
+                - "directconnect:List*"
                 - "elasticloadbalancing:Describe*"
                 - "network-firewall:Describe*"
                 - "network-firewall:List*"
