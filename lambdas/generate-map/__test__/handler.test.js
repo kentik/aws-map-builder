@@ -1,6 +1,6 @@
+const axios = require('axios');
 const { handler, grpcCloudMapsService } = require('../src/index');
 const AwsCrawler = require('../src/lib/awsCrawler');
-const axios = require('axios');
 
 describe('GenerateMap lambda handler', () => {
   beforeEach(() => {
@@ -30,25 +30,25 @@ describe('GenerateMap lambda handler', () => {
   });
 
   [{ event: {}, label: 'default' }, { event: {}, label: 'send action' }]
-    .forEach(({ event, label}) =>
+    .forEach(({ event, label }) =>
       test(label, async () => {
-        const target_url = 'https://foo.bar/baz?secret=magic';
+        const targetUrl = 'https://foo.bar/baz?secret=magic';
         const grpcSpy = jest.spyOn(grpcCloudMapsService, 'provideAwsMetadataStorageLocationPromise')
           .mockImplementation(async (params, { metadata }) => {
             expect(params).toMatchObject({
               version: 'aws-1.0',
               source_aws_account_id: '000001112234',
-              source_aws_region: 'us-mist-6'
+              source_aws_region: 'us-mist-6',
             });
             expect(metadata).toMatchObject({
               'X-CH-Auth-Email': 'remi@kentik.com',
-              'X-CH-Auth-API-Token': 'cafebabe'
-            })
-            return { target_url };
+              'X-CH-Auth-API-Token': 'cafebabe',
+            });
+            return { target_url: targetUrl };
           });
         const axiosSpy = jest.spyOn(axios, 'put')
-          .mockImplementation(async (url, buffer) => {
-            expect(url).toEqual(target_url);
+          .mockImplementation(async (url) => {
+            expect(url).toEqual(targetUrl);
           });
 
         const result = await handler(event, context);
@@ -61,7 +61,6 @@ describe('GenerateMap lambda handler', () => {
           body: null,
         });
       }));
-
 
   test('invalid action', async () => {
     const event = { pathParameters: { action: 'wronk' } };
@@ -82,7 +81,7 @@ describe('GenerateMap lambda handler', () => {
       .mockRejectedValue(new Error('grpc did not work'));
 
     const consoleSpy = jest.spyOn(console, 'error')
-      .mockImplementation((message, code, details) => {
+      .mockImplementation((message, code) => {
         expect(code).toEqual('grpc did not work');
       });
 
@@ -108,7 +107,7 @@ describe('GenerateMap lambda handler', () => {
       .mockRejectedValue(new Error('server unknown'));
 
     const consoleSpy = jest.spyOn(console, 'error')
-      .mockImplementation((message, code, details) => {
+      .mockImplementation((message, code) => {
         expect(code).toEqual('server unknown');
       });
 

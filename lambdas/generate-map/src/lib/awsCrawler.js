@@ -1,4 +1,4 @@
-const AWS = require('aws-sdk');
+const AWS = require('aws-sdk'); // eslint-disable-line import/no-extraneous-dependencies
 
 /* basic object helpers */
 
@@ -19,12 +19,14 @@ const merge = (values) =>
  * @param {object} options - fetching options including pagination config that given AWS SDK client uses
  * @returns combined pages of result set from all AWS SDK method calls
  */
-const fetchAll = async ({ serviceName, client, methodName, params, options = {} }) => {
+const fetchAll = async ({
+  serviceName, client, methodName, params, options = {},
+}) => {
   const result = {};
   const { pagination = {} } = options;
   const {
     request: requestTokenName = 'NextToken',
-    response: responseTokenName = 'NextToken'
+    response: responseTokenName = 'NextToken',
   } = pagination;
 
   let currentToken = null;
@@ -35,7 +37,7 @@ const fetchAll = async ({ serviceName, client, methodName, params, options = {} 
       if (currentToken !== null) {
         callParams[requestTokenName] = currentToken;
       }
-      const response = await client[methodName](callParams).promise();
+      const response = await client[methodName](callParams).promise(); // eslint-disable-line no-await-in-loop
       const { [responseTokenName]: nextToken, ...rest } = response;
 
       for (const key of Object.keys(rest)) {
@@ -55,27 +57,21 @@ const fetchAll = async ({ serviceName, client, methodName, params, options = {} 
   return result;
 };
 
-/**
- * Orchestrates fetching and augmenting the data according to the parameters
- *
- * @param {object} data - collection object including array of objects that are to be augmented
- * @param {array} augments - augmentation definitions
- * @param {object} client - AWS SDK client instance
- * @param {object} options - fetching options including pagination config that given AWS SDK client uses
- * @returns single type data collection fetched or fetched and augmented
- */
-const fetchAndAugment = async ({ serviceName, client, methodName, augmentWith, options, passedParams, parent, staticParams }) => {
-  const result = await fetchAll({ serviceName, client, methodName, options, params: { ...staticParams, ...passedParams } });
-  if (!augmentWith) return result;
-
-  for (const { methodName, property, paramsMapping = {}, staticParams = {}, targetMapping, augmentWith: augmentChildrenWith } of augmentWith) {
-    const { [property]: itemsToAugment } = result;
+const augment = async (data, {
+  serviceName, client, options, augmentWith, parent,
+}) => {
+  for (const {
+    methodName, property, paramsMapping = {}, staticParams = {}, targetMapping, augmentWith: augmentChildrenWith,
+  } of augmentWith) {
+    const { [property]: itemsToAugment } = data;
     const { parent: parentMapping, ...currentItemMapping } = paramsMapping;
     for (const item of itemsToAugment) {
       const params = {
         ...(currentItemMapping && pickTransformed(item, currentItemMapping)),
         ...(parent && parentMapping && pickTransformed(parent, parentMapping)),
       };
+
+      /* eslint-disable-next-line no-await-in-loop, no-use-before-define */
       const augmentation = await fetchAndAugment({
         serviceName,
         client,
@@ -89,8 +85,30 @@ const fetchAndAugment = async ({ serviceName, client, methodName, augmentWith, o
       Object.assign(item, pickTransformed(augmentation, targetMapping));
     }
   }
-  return result;
+  return data;
+};
 
+/**
+ * Orchestrates fetching and augmenting the data according to the parameters
+ *
+ * @param {object} data - collection object including array of objects that are to be augmented
+ * @param {array} augments - augmentation definitions
+ * @param {object} client - AWS SDK client instance
+ * @param {object} options - fetching options including pagination config that given AWS SDK client uses
+ * @returns single type data collection fetched or fetched and augmented
+ */
+const fetchAndAugment = async ({
+  serviceName, client, methodName, augmentWith, options, passedParams, parent, staticParams,
+}) => {
+  const result = await fetchAll({
+    serviceName, client, methodName, options, params: { ...staticParams, ...passedParams },
+  });
+  if (augmentWith) {
+    await augment(result, {
+      serviceName, client, options, augmentWith, parent,
+    });
+  }
+  return result;
 };
 
 /**
@@ -112,13 +130,13 @@ class AwsCrawler {
       for (const method of methods) {
         if (typeof method === 'string') {
           this.assertAwsMethod(service, method);
-          continue;
-        }
-        const { methodName, augmentWith } = method;
-        this.assertAwsMethod(service, methodName);
-        if (augmentWith) {
-          for (const augment of augmentWith) {
-            this.assertAwsMethod(service, augment.methodName);
+        } else {
+          const { methodName, augmentWith } = method;
+          this.assertAwsMethod(service, methodName);
+          if (augmentWith) {
+            for (const augmentItem of augmentWith) {
+              this.assertAwsMethod(service, augmentItem.methodName);
+            }
           }
         }
       }
@@ -136,9 +154,15 @@ class AwsCrawler {
       const items = Object.entries(this.mapping).flatMap(([service, { methods, options }]) => {
         const client = this.clients[service];
         return methods.map((method) => {
-          if (typeof method === 'string') return { serviceName: service, client, methodName: method, options };
+          if (typeof method === 'string') {
+            return {
+              serviceName: service, client, methodName: method, options,
+            };
+          }
           const { methodName, augmentWith } = method;
-          return { serviceName: service, client, methodName, augmentWith, options };
+          return {
+            serviceName: service, client, methodName, augmentWith, options,
+          };
         });
       });
       const result = await Promise.all(items.map(fetchAndAugment));

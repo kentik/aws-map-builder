@@ -1,12 +1,10 @@
-const AWS = require('aws-sdk');
+const { createMockServer } = require('grpc-mock');
 const GrpcClient = require('../src/lib/grpcClient');
-const fs = require('fs')
-const {createMockServer} = require('grpc-mock');
 
 describe('GrpcClient', () => {
   const protoPath = `${__dirname}/../src/proto/cloud_maps.proto`;
   const packageName = 'kentik.cloud_maps.v202201alpha1';
-  const serviceName = 'CloudMapsService'
+  const serviceName = 'CloudMapsService';
   let mockServer;
   let client;
 
@@ -15,15 +13,17 @@ describe('GrpcClient', () => {
       protoPath,
       packageName,
       serviceName,
-      rules: [{ method: "ProvideAwsMetadataStorageLocation",
+      rules: [{
+        method: 'ProvideAwsMetadataStorageLocation',
         input: {
           version: 'aws-1.0',
           sourceAwsAccountId: 'foobar',
           sourceAwsRegion: 'abcdef',
-        }, output: {
+        },
+        output: {
           targetUrl: 'http://devnull.kentik.com/cafebabe',
         },
-      }]
+      }],
     });
     await mockServer.listen('127.0.0.1:50051');
 
@@ -56,7 +56,4 @@ describe('GrpcClient', () => {
       done();
     });
   });
-
-
-
 });
