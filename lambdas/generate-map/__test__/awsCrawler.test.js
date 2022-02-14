@@ -1,9 +1,9 @@
 const AwsMock = require('aws-sdk-mock');
-const fs = require('fs')
 const AwsCrawler = require('../src/lib/awsCrawler');
 
 describe('awsCrawler', () => {
   const anyCallback = expect.any(Function);
+
   afterEach(() => AwsMock.restore());
 
   test('should invoke specified methods', async () => {
@@ -13,7 +13,7 @@ describe('awsCrawler', () => {
           State: 'ongoing',
           ZoneName: 'eu-central-1a',
         },
-      ]
+      ],
     });
     AwsMock.mock('EC2', 'describeAvailabilityZones', describeZonesMock);
 
@@ -40,9 +40,9 @@ describe('awsCrawler', () => {
     expect(describeZonesMock).toHaveBeenCalled();
 
     expect(result).toMatchObject({
-      Buckets: [ { Name: 'some-bucket' }, { Name: 'some-other-bucket' } ],
+      Buckets: [{ Name: 'some-bucket' }, { Name: 'some-other-bucket' }],
       Owner: { ID: 'cafebabe' },
-      AvailabilityZones: [ { State: 'ongoing', ZoneName: 'eu-central-1a' } ]
+      AvailabilityZones: [{ State: 'ongoing', ZoneName: 'eu-central-1a' }],
     });
   });
 
@@ -131,7 +131,7 @@ describe('awsCrawler', () => {
     expect(describeInstancesMock).toHaveBeenNthCalledWith(2, { NextToken: 'token-cafebabe' }, anyCallback);
     expect(describeInstancesMock).toHaveBeenNthCalledWith(3, { NextToken: 'token-foobar' }, anyCallback);
     expect(result).toMatchObject({
-      Reservations: [ fixtureReservation1, fixtureReservation2, fixtureReservation3 ],
+      Reservations: [fixtureReservation1, fixtureReservation2, fixtureReservation3],
     });
   });
 
@@ -154,10 +154,9 @@ describe('awsCrawler', () => {
         Name: 'some-bucket',
         Prefix: 'foobar',
         MaxKeys: 1000,
-        CommonPrefixes: []
+        CommonPrefixes: [],
       });
     AwsMock.mock('S3', 'listObjects', listObjectsMock);
-
 
     const getBucketVersioningMock = jest.fn()
       .mockResolvedValueOnce({ Status: 'Enabled' });
@@ -166,7 +165,7 @@ describe('awsCrawler', () => {
     const getObjectAclMock = jest.fn()
       .mockResolvedValue({
         Owner: { ID: 'foobar' },
-        Grants: [ { Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' } ]
+        Grants: [{ Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' }],
       });
     AwsMock.mock('S3', 'getObjectAcl', getObjectAclMock);
 
@@ -197,7 +196,7 @@ describe('awsCrawler', () => {
             paramsMapping: { Name: 'Bucket' },
             targetMapping: { Status: 'VersioningStatus' },
           },
-        ]
+          ],
         }],
       },
     });
@@ -215,21 +214,21 @@ describe('awsCrawler', () => {
           Objects: [
             {
               Key: 'foobar/myfile1.zip',
-              Grants: [ { Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' } ]
+              Grants: [{ Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' }],
             },
             {
               Key: 'foobar/myfile2.zip',
-              Grants: [ { Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' } ]
+              Grants: [{ Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' }],
             },
             {
               Key: 'foobar/myfile3.zip',
-              Grants: [ { Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' } ]
-            }
+              Grants: [{ Grantee: { ID: 'foobar' }, Permission: 'FULL_CONTROL' }],
+            },
           ],
-          VersioningStatus: 'Enabled'
-        }
+          VersioningStatus: 'Enabled',
+        },
       ],
-      Owner: { ID: 'cafebabe' }
+      Owner: { ID: 'cafebabe' },
     });
   });
 

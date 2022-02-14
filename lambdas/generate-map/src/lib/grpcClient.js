@@ -6,6 +6,15 @@
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 
+const generateMetadata = (metadata) => {
+  if (!metadata) return {};
+  const metadataGrpc = new grpc.Metadata();
+  for (const [key, val] of Object.entries(metadata)) {
+    metadataGrpc.add(key, val);
+  }
+  return metadataGrpc;
+};
+
 class GRPCClient {
   constructor(protoPath, packageName, service, host, options = {}) {
     this.packageDefinition = protoLoader.loadSync(protoPath, {
@@ -13,77 +22,54 @@ class GRPCClient {
       longs: (options.longs === undefined) ? String : options.longs,
       enums: (options.enums === undefined) ? String : options.enums,
       defaults: (options.default === undefined) ? true : options.default,
-      oneofs: (options.default === undefined) ? true : options.default
+      oneofs: (options.default === undefined) ? true : options.default,
     });
 
-    const proto = ((packageName) => {
-      const packagePath = packageName.split('.');
-      let proto = grpc.loadPackageDefinition(this.packageDefinition);
+    const proto = ((name) => {
+      const packagePath = name.split('.');
+      let definition = grpc.loadPackageDefinition(this.packageDefinition);
       for (let $i = 0; $i <= packagePath.length - 1; $i++) {
-        proto = proto[packagePath[$i]];
+        definition = definition[packagePath[$i]];
       }
-      return proto;
+      return definition;
     })(packageName);
 
     const listMethods = this.packageDefinition[`${packageName}.${service}`];
 
-    const credentials =
-      options.insecure
-        ? grpc.credentials.createInsecure()
-        : grpc.credentials.createSsl();
+    const credentials = options.insecure
+      ? grpc.credentials.createInsecure()
+      : grpc.credentials.createSsl();
 
     this.client = new proto[service](host, credentials);
     this.listNameMethods = [];
 
+    /* eslint-disable guard-for-in */
     for (const key in listMethods) {
       const methodName = listMethods[key].originalName;
       this.listNameMethods.push(methodName);
-      this[`${methodName}Async`] = (data, fnAnswer, options = {}) => {
-        let metadataGrpc = {};
-        if (('metadata' in options) && (typeof options.metadata == 'object')) {
-          metadataGrpc = this.generateMetadata(options.metadata)
-        }
-        this.client[methodName](data, metadataGrpc, fnAnswer);
-      }
-      this[`${methodName}Stream`] = (data, options = {}) => {
-        let metadataGrpc = {};
-        if (('metadata' in options) && (typeof options.metadata == 'object')) {
-          metadataGrpc = this.generateMetadata(options.metadata)
-        }
-        return this.client[methodName](data, metadataGrpc)
-      }
-      this[`${methodName}Promise`] = (data, options = {}) => {
-        let metadataGrpc = {};
-        if (('metadata' in options) && (typeof options.metadata == 'object')) {
-          metadataGrpc = this.generateMetadata(options.metadata)
-        }
-        const client = this.client;
-        return new Promise(function (resolve, reject) {
-          client[methodName](data, metadataGrpc, (err, dat) => {
-            if (err) {
-              return reject(err);
-            }
-            resolve(dat);
-          });
-        })
-      }
+
+      this[`${methodName}Async`] = (data, fnAnswer, { metadata = null } = {}) => {
+        this.client[methodName](data, generateMetadata(metadata), fnAnswer);
+      };
+
+      this[`${methodName}Stream`] = (data, { metadata = null } = {}) =>
+        this.client[methodName](data, generateMetadata(metadata));
+
+      this[`${methodName}Promise`] = (data, { metadata = null } = {}) => {
+        const { client } = this;
+        return new Promise((resolve, reject) => {
+          client[methodName](
+            data,
+            generateMetadata(metadata),
+            (error, result) => (error ? reject(error) : resolve(result)),
+          );
+        });
+      };
     }
   }
 
-  generateMetadata = (metadata) => {
-    let metadataGrpc = new grpc.Metadata();
-    for (let [key, val] of Object.entries(metadata)) {
-      metadataGrpc.add(key, val);
-    }
-    return metadataGrpc
-  };
-
-  runService(fnName, data, fnAnswer, options = {}) {
-    let metadataGrpc = {};
-    if (('metadata' in options) && (typeof options.metadata == 'object')) {
-      metadataGrpc = this.generateMetadata(options.metadata)
-    }
-    this.client[fnName](data, metadataGrpc, fnAnswer);
+  runService(fnName, data, fnAnswer, { metadata = null } = {}) {
+    this.client[fnName](data, generateMetadata(metadata), fnAnswer);
   }
 
   listMethods() {

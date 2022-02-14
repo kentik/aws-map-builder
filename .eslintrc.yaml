@@ -1,0 +1,31 @@
+# https://eslint.org/docs/user-guide/configuring
+---
+root: true
+parserOptions:
+  ecmaVersion: 2020
+env:
+  node: true
+  jest: true
+extends: airbnb-base
+rules:
+  no-await-in-loop:
+    - warn
+  implicit-arrow-linebreak: 0
+  no-restricted-syntax: 0
+  no-plusplus: 0
+  no-console: 0
+  max-len:
+    - error
+    - code: 120
+overrides:
+- files:
+  - "bin/*"
+  - "lib/*"
+- files:
+  - "**/__test__/*.js"
+  rules:
+    no-new: 0
+    global-require: warn
+    import/no-extraneous-dependencies:
+      - warn
+      - devDependencies: true

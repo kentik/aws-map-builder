@@ -3,7 +3,7 @@ const { gzip } = require('zlib');
 const { promisify } = require('util');
 const AwsCrawler = require('./lib/awsCrawler');
 const GrpcClient = require('./lib/grpcClient');
-const ApiGateway = require('./lib/apiGateway')
+const ApiGateway = require('./lib/apiGateway');
 const defaultAwsNetworkMapping = require('./lib/defaultAwsNetworkMapping.json');
 
 const compress = promisify(gzip);
@@ -17,10 +17,10 @@ const {
 } = process.env;
 
 const grpcCloudMapsService = new GrpcClient(
-  `${__dirname}/proto/cloud_maps.proto`,  // proto file path
-  'kentik.cloud_maps.v202201alpha1',      // package path
-  'CloudMapsService',                     // service name
-  CLOUDMAPS_SERVICE_HOST,                 // service host
+  `${__dirname}/proto/cloud_maps.proto`, // proto file path
+  'kentik.cloud_maps.v202201alpha1', // package path
+  'CloudMapsService', // service name
+  CLOUDMAPS_SERVICE_HOST, // service host
   { insecure: !!GRPC_INSECURE },
 );
 
@@ -33,25 +33,28 @@ const actions = {
       'X-CH-Auth-API-Token': AUTHORIZATION_API_TOKEN,
     };
 
-    const { target_url } = await grpcCloudMapsService.provideAwsMetadataStorageLocationPromise(source, { metadata });
+    const { target_url: targetUrl } = await grpcCloudMapsService
+      .provideAwsMetadataStorageLocationPromise(source, { metadata });
     console.info('Target URL determined');
 
     const serialized = JSON.stringify(data);
     const compressed = await compress(serialized);
-    console.info(`Topology data compression: ${serialized.length} -> ${compressed.length} bytes (ratio ${Math.round(100 * compressed.length/serialized.length)}%)`);
+    const ratio = Math.round((100 * compressed.length) / serialized.length);
+    console.info(`Topology data compression: ${serialized.length} -> ${compressed.length} bytes (ratio ${ratio}%)`);
 
-    await axios.put(target_url, compressed);
-    console.info(`Topology file stored at target URL: ${target_url.substring(0, target_url.indexOf('?'))}`);
+    await axios.put(targetUrl, compressed);
+    console.info(`Topology file stored at target URL: ${targetUrl.substring(0, targetUrl.indexOf('?'))}`);
 
     return ApiGateway.Success();
-  }
+  },
 };
 
 const handler = async (event, context) => {
   try {
     // ARN format cheat-sheet: arn:aws:<service>:<region>:<account_id>:<resource>
-    const [,,, region, accountId] = context?.invokedFunctionArn?.split(':');
-    if (!region || !accountId) throw new Error(`Invalid function ARN, cannot determine region and account ID`);
+    if (!context?.invokedFunctionArn) throw new Error('Missing function ARN, cannot determine region and account ID');
+    const [,,, region, accountId] = context.invokedFunctionArn.split(':');
+    if (!region || !accountId) throw new Error('Invalid function ARN, cannot determine region and account ID');
 
     const { action = 'send' } = event.pathParameters ?? {};
     if (!actions[action]) {
@@ -80,9 +83,7 @@ const handler = async (event, context) => {
   }
 };
 
-
 module.exports = {
   handler,
   grpcCloudMapsService,
 };
-
