@@ -16,6 +16,11 @@ const {
   AWS_REGION_OVERRIDE,
 } = process.env;
 
+const metadata = {
+  'X-CH-Auth-Email': AUTHORIZATION_EMAIL,
+  'X-CH-Auth-API-Token': AUTHORIZATION_API_TOKEN,
+};
+
 const grpcCloudMapsService = new GrpcClient(
   `${__dirname}/proto/cloud_maps.proto`, // proto file path
   'kentik.cloud_maps.v202201alpha1', // package path
@@ -28,10 +33,6 @@ const actions = {
   render: (source, data) => ApiGateway.Success({ source, data }),
   send: async (source, data) => {
     console.info('GRPC client established');
-    const metadata = {
-      'X-CH-Auth-Email': AUTHORIZATION_EMAIL,
-      'X-CH-Auth-API-Token': AUTHORIZATION_API_TOKEN,
-    };
 
     const { target_url: targetUrl } = await grpcCloudMapsService
       .provideAwsMetadataStorageLocationPromise(source, { metadata });
@@ -69,8 +70,11 @@ const handler = async (event, context) => {
       source_aws_region: region,
     };
 
+    const { services } = await grpcCloudMapsService
+      .getAwsCrawlerConfigurationPromise(source, { metadata });
+
     const options = AWS_REGION_OVERRIDE ? { region: AWS_REGION_OVERRIDE } : {};
-    const networkCrawler = new AwsCrawler(defaultAwsNetworkMapping, options);
+    const networkCrawler = new AwsCrawler(JSON.parse(services), options);
     const infrastructure = await networkCrawler.execute();
     console.info('Infrastructure topology retrieved');
 
