@@ -1,8 +1,9 @@
 {
   "name": "kentik-aws-map-builder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Kentik AWS Map Builder",
   "author": "Kentik Engineering",
+  "main": "index.js",
   "private": true,
   "license": "MIT",
   "workspaces": {
