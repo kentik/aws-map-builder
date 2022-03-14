@@ -23,6 +23,16 @@ describe('GrpcClient', () => {
         output: {
           targetUrl: 'http://devnull.kentik.com/cafebabe',
         },
+      }, {
+        method: 'GetAwsCrawlerConfiguration',
+        input: {
+          version: 'aws-1.0',
+          sourceAwsAccountId: 'foobar',
+          sourceAwsRegion: 'abcdef',
+        },
+        output: {
+          services: JSON.stringify({ configuration: 'here' }),
+        },
       }],
     });
     await mockServer.listen('127.0.0.1:50051');
@@ -31,10 +41,13 @@ describe('GrpcClient', () => {
   });
 
   test('succeed initiating the client for cloudMaps', async () => {
-    expect(client.listMethods()).toEqual(['provideAwsMetadataStorageLocation']);
+    expect(client.listMethods()).toEqual(['provideAwsMetadataStorageLocation', 'getAwsCrawlerConfiguration']);
     expect(client.provideAwsMetadataStorageLocationAsync).toBeInstanceOf(Function);
     expect(client.provideAwsMetadataStorageLocationStream).toBeInstanceOf(Function);
     expect(client.provideAwsMetadataStorageLocationPromise).toBeInstanceOf(Function);
+    expect(client.getAwsCrawlerConfigurationAsync).toBeInstanceOf(Function);
+    expect(client.getAwsCrawlerConfigurationStream).toBeInstanceOf(Function);
+    expect(client.getAwsCrawlerConfigurationPromise).toBeInstanceOf(Function);
   });
 
   test('succeed calling the promise method', async () => {
