@@ -4,7 +4,6 @@ const { promisify } = require('util');
 const AwsCrawler = require('./lib/awsCrawler');
 const GrpcClient = require('./lib/grpcClient');
 const ApiGateway = require('./lib/apiGateway');
-const defaultAwsNetworkMapping = require('./lib/defaultAwsNetworkMapping.json');
 
 const compress = promisify(gzip);
 
