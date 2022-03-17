@@ -13,8 +13,23 @@ describe('GenerateMap lambda handler', () => {
 
   const invokedFunctionArn = 'arn:aws:lambda:us-mist-6:000001112234:function:GenerateMapFunction';
   const context = { invokedFunctionArn };
+  const crawlerConfig = { EC2: { methods: ['describeAvailabilityZones'] } };
 
   test('render action', async () => {
+    jest.spyOn(grpcCloudMapsService, 'getAwsCrawlerConfigurationPromise')
+      .mockImplementation(async (params, { metadata }) => {
+        expect(params).toMatchObject({
+          version: 'aws-1.0',
+          source_aws_account_id: '000001112234',
+          source_aws_region: 'us-mist-6',
+        });
+        expect(metadata).toMatchObject({
+          'X-CH-Auth-Email': 'remi@kentik.com',
+          'X-CH-Auth-API-Token': 'cafebabe',
+        });
+        return { services: JSON.stringify(crawlerConfig) };
+      });
+
     const event = { pathParameters: { action: 'render' } };
     const result = await handler(event, context);
 
@@ -33,7 +48,10 @@ describe('GenerateMap lambda handler', () => {
     .forEach(({ event, label }) =>
       test(label, async () => {
         const targetUrl = 'https://foo.bar/baz?secret=magic';
-        const grpcSpy = jest.spyOn(grpcCloudMapsService, 'provideAwsMetadataStorageLocationPromise')
+        const grpcGetConfigSpy = jest.spyOn(grpcCloudMapsService, 'getAwsCrawlerConfigurationPromise')
+          .mockImplementation(async () => ({ services: JSON.stringify(crawlerConfig) }));
+
+        const grpcProvideLocationSpy = jest.spyOn(grpcCloudMapsService, 'provideAwsMetadataStorageLocationPromise')
           .mockImplementation(async (params, { metadata }) => {
             expect(params).toMatchObject({
               version: 'aws-1.0',
@@ -53,7 +71,8 @@ describe('GenerateMap lambda handler', () => {
 
         const result = await handler(event, context);
 
-        expect(grpcSpy).toHaveBeenCalledTimes(1);
+        expect(grpcGetConfigSpy).toHaveBeenCalledTimes(1);
+        expect(grpcProvideLocationSpy).toHaveBeenCalledTimes(1);
         expect(axiosSpy).toHaveBeenCalledTimes(1);
 
         expect(result).toMatchObject({
@@ -76,7 +95,56 @@ describe('GenerateMap lambda handler', () => {
     });
   });
 
-  test('inaccessible grpc endpoint', async () => {
+  test('inaccessible grpc getAwsCrawlerConfigurationPromise endpoint', async () => {
+    jest.spyOn(grpcCloudMapsService, 'getAwsCrawlerConfigurationPromise')
+      .mockRejectedValue(new Error('grpc did not work'));
+
+    const consoleSpy = jest.spyOn(console, 'error')
+      .mockImplementation((message, code) => {
+        expect(code).toEqual('grpc did not work');
+      });
+
+    const result = await handler({}, context);
+
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    expect(result).toMatchObject({
+      statusCode: 500,
+      body: expect.any(String),
+    });
+
+    expect(JSON.parse(result.body)).toMatchObject({
+      message: 'Error generating the map',
+    });
+  });
+
+  test('invalid crawler configuration received', async () => {
+    jest.spyOn(grpcCloudMapsService, 'getAwsCrawlerConfigurationPromise')
+      .mockImplementation(async () => ({ services: JSON.stringify({ wrong: 'config' }) }));
+
+    const consoleSpy = jest.spyOn(console, 'error')
+      .mockImplementation((message, code) => {
+        expect(code).toEqual('Invalid AWS service: wrong');
+      });
+
+    const result = await handler({}, context);
+
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    expect(result).toMatchObject({
+      statusCode: 500,
+      body: expect.any(String),
+    });
+
+    expect(JSON.parse(result.body)).toMatchObject({
+      message: 'Error generating the map',
+    });
+  });
+
+  test('inaccessible grpc provideAwsMetadataStorageLocation endpoint', async () => {
+    jest.spyOn(grpcCloudMapsService, 'getAwsCrawlerConfigurationPromise')
+      .mockImplementation(async () => ({ services: JSON.stringify(crawlerConfig) }));
+
     jest.spyOn(grpcCloudMapsService, 'provideAwsMetadataStorageLocationPromise')
       .mockRejectedValue(new Error('grpc did not work'));
 
@@ -100,6 +168,9 @@ describe('GenerateMap lambda handler', () => {
   });
 
   test('problematic target url', async () => {
+    jest.spyOn(grpcCloudMapsService, 'getAwsCrawlerConfigurationPromise')
+      .mockImplementation(async () => ({ services: JSON.stringify(crawlerConfig) }));
+
     jest.spyOn(grpcCloudMapsService, 'provideAwsMetadataStorageLocationPromise')
       .mockImplementation(async () => ({ target_url: 'https://foo.bar/baz?secret=magic' }));
 
